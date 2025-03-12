@@ -46,8 +46,8 @@ The file hierarchy of your hand-in repo should be as follows:
 │   └── classifier.py   # code for training, validating, and testing the classifier
 │ 
 ├── result/
-│   ├── result_baseline.csv      # your resutls on the baseline setup
-│   ├── result_extended.csv      # your resutls on the extended setup
+│   ├── result_baseline.csv      # your results on the baseline setup
+│   ├── result_extended.csv      # your results on the extended setup
 │   └── report.pdf      		 # your report in PDF
 │ 
 ├── main_demo.py		# demo script (reference setup, remove in your hand-in)
