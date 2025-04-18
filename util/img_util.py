@@ -37,9 +37,19 @@ class ImageDataLoader:
         self.directory = directory
         self.shuffle = shuffle
         self.transform = transform
+        self.file_list= []
 
         # get a sorted list of all files in the directory
         # fill in with your own code below
+        
+        f=open(self.directory,'r')
+        list1=[]
+        for line in f:
+            list1.append(line.strip().split(sep=','))
+        f.close()
+        for x in list1[1:]:
+            if x[1]=='Q':
+                self.file_list.append(x[0])
 
         if not self.file_list:
             raise ValueError("No image files found in the directory.")
