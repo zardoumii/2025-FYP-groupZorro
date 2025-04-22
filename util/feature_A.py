@@ -39,9 +39,15 @@ def get_asymmetry(mask):
     for _ in range(6):
         segment = crop(mask)
         (np.sum(segment))
-        scores.append(np.sum(np.logical_xor(segment, np.flip(segment))) / (np.sum(segment)))
+        #scores.append(np.sum(np.logical_xor(segment, np.flip(segment))) / (np.sum(segment)))
+        denom = np.sum(segment)
+        if denom == 0:
+            scores.append(np.nan)  # or maybe 0 or some default value
+        else:
+            scores.append(np.sum(np.logical_xor(segment, np.flip(segment))) / denom)
         mask = rotate(mask, 30)
-    return sum(scores) / len(scores)
+    #return sum(scores) / len(scores)
+    return np.nanmean(scores)
 
 def processmaskasymmetry(mask_path):
     """

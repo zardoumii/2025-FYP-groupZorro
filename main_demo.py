@@ -11,6 +11,8 @@ from sklearn.model_selection import train_test_split
 from util.img_util import readImageFile, saveImageFile, ImageDataLoader, isbordertouching, inspectborders
 from util.inpaint_util import removeHair
 from util.feature_A import processmaskasymmetry
+from util.feature_B import processmaskborderirregularity
+
 
 from os.path import join
 
@@ -18,8 +20,12 @@ import matplotlib.pyplot as plt
 
 """Adjust paths Bbelow according to your directory structure"""
 # Directory where all the masked images are stored
-Masksfolder = '/Users/youssefzardoumi/Desktop/Masked'
-outputA = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/asymmetryscores.csv'
+# Masksfolder = '/Users/youssefzardoumi/Desktop/Masked'
+# outputA = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/asymmetryscores.csv'
+
+Masksfolder = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\lesion_masks'
+outputA = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\asymmetryscores2.csv'
+outputB = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\borderirregularityscores.csv'
 
 
 # inspectborders(
@@ -57,6 +63,35 @@ def Asymmetryforall(Masked_path, outputA):
 Asymmetryforall(Masksfolder, outputA)
 
 
+
+def BorderIrregularityForAll(Masked_path, output_path):
+    """
+    Processes all mask files and computes border irregularity features.
+    Saves results to a CSV.
+    """
+    files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
+    results = []
+
+    for x in files:
+        file_path = join(Masked_path, str(x))
+        try:
+            streaks, compactness, convexity = processmaskborderirregularity(file_path)
+        except Exception as e:
+            print(f"Error processing file {x}: {e}")
+            streaks, compactness, convexity = 'N/A', 'N/A', 'N/A'
+
+        results.append({
+            'filename': x,
+            'streaks': streaks,
+            'compactness': compactness,
+            'convexity': convexity
+        })
+
+    resultsdf = pd.DataFrame(results, columns=['filename', 'streaks', 'compactness', 'convexity'])
+    resultsdf.to_csv(output_path, index=False)
+    print(f"Border irregularity scores saved to: {output_path}")
+    
+BorderIrregularityForAll(Masksfolder, outputB)
 
 # files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
 
