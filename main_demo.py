@@ -20,14 +20,14 @@ import matplotlib.pyplot as plt
 
 """Adjust paths Bbelow according to your directory structure"""
 # Directory where all the images are stored
-Imagefolder = '/imgs_part_1'
+Imagefolder = '/Users/youssefzardoumi/Desktop/imgs_part_1'
 # Directory where all the masked images are stored
-Masksfolder = '/Masked'
+Masksfolder = '/Users/youssefzardoumi/Desktop/Masked'
 # Directory where Features results will be saved
-outputA = '/asymmetryscores.csv'
-outputB = '/irregularityscores.csv'
-outputC = '/colorvariation.csv'
-outputD = '/diameterscores.csv'
+outputA = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/asymmetryscores.csv'
+outputB = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/irregularityscores.csv'
+outputC = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/colorvariation.csv'
+outputD = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/diameterscores.csv'
 
 # inspectborders(
 #     csv_path="//dataset.csv",
@@ -115,33 +115,11 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
     df.to_csv(output_csv, index=False)
     print(f"Color variation scores saved to: {output_csv}")
     
-def DiameterForAll(mask_folder, output_csv):
-    """
-    Calculates the maximum diameter for all mask images in a folder and saves the results to a CSV file.
-    """
-    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
-    results = []
 
-    for mask_filename in mask_files:
-        mask_path = os.path.join(mask_folder, mask_filename)
-
-        try:
-            diameter = calculatediameter(mask_path)
-        except Exception as e:
-            print(f"Error processing {mask_filename}: {e}")
-            diameter = 'N/A'
-
-        results.append({'filename': mask_filename, 'diameter_pixels': diameter})
-
-    df = pd.DataFrame(results)
-    df.to_csv(output_csv, index=False)
-    print(f"Diameter scores saved to: {output_csv}")
 
 # Asymmetryforall(Masksfolder, outputA)
 # IrregularityForAll(Masksfolder,outputB)
 # ColorVariationForAll(Imagefolder, Masksfolder, outputC)
-DiameterForAll(Masksfolder,outputD)
-
 
 # files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
 
