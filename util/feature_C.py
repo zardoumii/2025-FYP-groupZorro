@@ -1,42 +1,37 @@
-import cv2
 import numpy as np
-from sklearn.cluster import KMeans
+import cv2
 
-def get_multicolor_rate(image_path, mask_path, n=5):
+
+def colorvariationscore(image_path, mask_path):
     """
-    Calculates color variation by clustering colors in the masked lesion region.
+    Calculates the color variation score of a lesion based on standard deviation in RGB channels.
 
     Args:
-        image_path (str): Path to the RGB lesion image.
+        image_path (str): Path to the original RGB image.
         mask_path (str): Path to the binary mask image.
-        n (int): Number of color clusters.
 
     Returns:
-        float: Percentage of dominant colors used to describe the lesion (as a proxy for variation).
+        float or None: The average standard deviation of RGB values within the masked area,
+                       or None if inputs are invalid or lesion area is empty.
     """
-    # Load image and mask
     image = cv2.imread(image_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
 
-    # Create a mask boolean array (1 inside lesion, 0 outside)
-    binary_mask = mask > 127
+    if image is None or mask is None:
+        print(f"Could not load {image_path} or {mask_path}")
+        return None
 
-    # Extract only the lesion region's pixels
-    lesion_pixels = image[binary_mask]
 
-    if lesion_pixels.shape[0] == 0:
-        return np.nan
+    mask = (mask > 0).astype(np.uint8)
 
-    # Run KMeans on lesion pixels
-    kmeans = KMeans(n_clusters=n, random_state=42, n_init=10)
-    kmeans.fit(lesion_pixels)
 
-    # Count how many pixels belong to each color cluster
-    unique, counts = np.unique(kmeans.labels_, return_counts=True)
-    proportions = counts / np.sum(counts)
+    lesion_pixels = image[mask == 1]
 
-    # A higher entropy-like score = more variation
-    variation_score = -np.sum(proportions * np.log(proportions + 1e-10))
+    if lesion_pixels.size == 0:
+        return None
 
-    return variation_score
+ 
+    std_per_channel = np.std(lesion_pixels, axis=0)
+    avg_std = np.mean(std_per_channel)
+
+    return avg_std
