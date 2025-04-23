@@ -1,21 +1,36 @@
+import cv2
 import numpy as np
-from skimage.measure import label, regionprops
-from skimage.morphology import convex_hull_image
-from math import sqrt
+import itertools
 
-def get_diameter(mask):
+def calculatediameter(mask_path):
     """
-    Approximate diameter using the bounding box diagonal.
-    Much faster than brute-force distance calculation.
+    Calculates the maximum diameter of a lesion in a binary mask image.
+
+    Args:
+        mask_path (str): Path to the binary mask image file.
+
+    Returns:
+        float: The longest Euclidean distance between any two points on the largest contour,
+               representing the lesion's maximum diameter.
     """
-    labeled = label(mask)
-    props = regionprops(labeled)
+    
+    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    if mask is None:
+        raise ValueError(f"Cannot read mask file: {mask_path}")
 
-    if not props:
-        return np.nan
+    _, binary = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    region = props[0]
-    minr, minc, maxr, maxc = region.bbox
-    diameter = np.sqrt((maxr - minr)**2 + (maxc - minc)**2)
-    return diameter
+    if not contours:
+        return 0
 
+    largest_contour = max(contours, key=cv2.contourArea)
+    points = largest_contour[:, 0, :]
+
+    max_distance = 0
+    for p1, p2 in itertools.combinations(points, 2):
+        dist = np.linalg.norm(p1 - p2)
+        if dist > max_distance:
+            max_distance = dist
+
+    return max_distance
