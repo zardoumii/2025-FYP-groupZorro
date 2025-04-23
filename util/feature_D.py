@@ -5,33 +5,17 @@ from math import sqrt
 
 def get_diameter(mask):
     """
-    Calculates the diameter of the lesion based on the binary mask.
-    Uses the maximum distance between any two boundary points (longest axis).
-    
-    Args:
-        mask (2D np.array): Binary mask of the lesion.
-    
-    Returns:
-        float: Estimated diameter in pixels.
+    Approximate diameter using the bounding box diagonal.
+    Much faster than brute-force distance calculation.
     """
-    # Label connected regions in mask
-    labeled_mask = label(mask)
-    props = regionprops(labeled_mask)
+    labeled = label(mask)
+    props = regionprops(labeled)
 
-    if len(props) == 0:
-        return np.nan  # No lesion detected
+    if not props:
+        return np.nan
 
     region = props[0]
+    minr, minc, maxr, maxc = region.bbox
+    diameter = np.sqrt((maxr - minr)**2 + (maxc - minc)**2)
+    return diameter
 
-    # Get the coordinates of the lesion
-    coords = region.coords
-
-    # Compute pairwise distances (brute-force)
-    max_distance = 0
-    for i in range(len(coords)):
-        for j in range(i + 1, len(coords)):
-            dist = np.linalg.norm(coords[i] - coords[j])
-            if dist > max_distance:
-                max_distance = dist
-
-    return max_distance
