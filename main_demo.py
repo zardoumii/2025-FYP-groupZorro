@@ -11,34 +11,30 @@ from sklearn.model_selection import train_test_split
 from util.img_util import readImageFile, saveImageFile, ImageDataLoader, isbordertouching, inspectborders
 from util.inpaint_util import removeHair
 from util.feature_A import processmaskasymmetry
-from util.feature_B import processmaskborderirregularity
-from util.feature_C import get_multicolor_rate
-from util.feature_D import get_diameter
-
-
+from util.feature_B import measureborderirregularity
+from util.feature_C import colorvariationscore
+from util.feature_D import calculatediameter
 from os.path import join
 
 import matplotlib.pyplot as plt
 
 """Adjust paths Bbelow according to your directory structure"""
+# Directory where all the images are stored
+Imagefolder = '/imgs_part_1'
 # Directory where all the masked images are stored
-# Masksfolder = '/Users/youssefzardoumi/Desktop/Masked'
-# outputA = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/asymmetryscores.csv'
-
-Masksfolder = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\lesion_masks'
-outputA = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\asymmetryscores2.csv'
-outputB = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\borderirregularityscores.csv'
-outputC = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\colorvariationscores.csv'
-outputD = r'C:\Users\anial\Desktop\Study 2nd Semester\Projects in Data Scince\project\2025-FYP-Final\result\diameterscores.csv'
-
+Masksfolder = '/Masked'
+# Directory where Features results will be saved
+outputA = '/asymmetryscores.csv'
+outputB = '/irregularityscores.csv'
+outputC = '/colorvariation.csv'
+outputD = '/diameterscores.csv'
 
 # inspectborders(
-#     csv_path="/Users/youssefzardoumi/Desktop/dataset.csv",
-#     mask_folder="/Users/youssefzardoumi/Desktop/Masked",
-#     save_folder="/Users/youssefzardoumi/Desktop/manual_inspection",
+#     csv_path="//dataset.csv",
+#     mask_folder="/Masked",
+#     save_folder="/manual_inspection",
 #     threshold=0.05  # 5% of border touching the image edge
 # )
-'''
 
 def Asymmetryforall(Masked_path, outputA):
     """
@@ -52,11 +48,8 @@ def Asymmetryforall(Masked_path, outputA):
     for x in files:
         file_path = join(Masked_path, str(x))
         try:
-            # Attempt to calculate the asymmetry score
             asymmetry_score = processmaskasymmetry(file_path)
         except Exception as e:
-            # If an error occurs, log it and set the score to 'N/A'
-            print(f"Error processing file {x}: {e}")
             asymmetry_score = 'N/A'
             
         results.append({'filename': x, 'asymmetry_score': asymmetry_score})
@@ -64,95 +57,90 @@ def Asymmetryforall(Masked_path, outputA):
     resultsdf = pd.DataFrame(results, columns=['filename', 'asymmetry_score'])
     resultsdf.to_csv(outputA, index=False)
     print(f"Asymmetry scores saved to: {outputA}")
-
-Asymmetryforall(Masksfolder, outputA)
-
-
-
-def BorderIrregularityForAll(Masked_path, output_path):
+    
+def IrregularityForAll(masked_path, output_csv):
     """
-    Processes all mask files and computes border irregularity features.
-    Saves results to a CSV.
+    Processes all mask files in the given folder and calculates their border irregularity scores.
+    Saves the results to a CSV file.
     """
-    files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
+    files = [f for f in os.listdir(masked_path) if f.endswith('.png')]
+
     results = []
 
-    for x in files:
-        file_path = join(Masked_path, str(x))
+    for filename in files:
+        file_path = join(masked_path, filename)
         try:
-            streaks, compactness, convexity = processmaskborderirregularity(file_path)
+            score = measureborderirregularity(file_path)
         except Exception as e:
-            print(f"Error processing file {x}: {e}")
-            streaks, compactness, convexity = 'N/A', 'N/A', 'N/A'
-
-        results.append({
-            'filename': x,
-            'streaks': streaks,
-            'compactness': compactness,
-            'convexity': convexity
-        })
-
-    resultsdf = pd.DataFrame(results, columns=['filename', 'streaks', 'compactness', 'convexity'])
-    resultsdf.to_csv(output_path, index=False)
-    print(f"Border irregularity scores saved to: {output_path}")
-    
-BorderIrregularityForAll(Masksfolder, outputB)
-
-
-def ColorVariationForAll(img_folder, mask_folder, output_path, n_clusters=5):
-    """
-    Calculates color variation scores for all lesions and saves them to CSV.
-    """
-    files = [f for f in os.listdir(img_folder) if f.endswith('.jpg') or f.endswith('.png')]
-    
-    results = []
-
-    for file in files:
-        img_path = join(img_folder, file)
-        mask_path = join(mask_folder, file)  # assumes same filename
-
-        try:
-            score = get_multicolor_rate(img_path, mask_path, n_clusters)
-        except Exception as e:
-            print(f"Error processing {file}: {e}")
             score = 'N/A'
 
-        results.append({'filename': file, 'color_variation_score': score})
+        results.append({'filename': filename, 'irregularity_score': score})
 
-    df = pd.DataFrame(results)
-    df.to_csv(output_path, index=False)
-    print(f"Color variation scores saved to {output_path}")
+    df = pd.DataFrame(results, columns=['filename', 'irregularity_score'])
+    df.to_csv(output_csv, index=False)
+    print(f"Irregularity scores saved to: {output_csv}")
     
-#ColorVariationForAll(img_folder, Masksfolder, outputC)
-
-'''
-
-def DiameterForAll(Masked_path, outputD):
+    
+    
+    
+def ColorVariationForAll(image_folder, mask_folder, output_csv):
     """
-    Processes all mask files in the given folder and calculates their diameter.
+    Computes color variation scores for all image-mask pairs in specified folders and stores results.
+    
     """
-    files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
-
+    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
     results = []
 
-    for x in files:
-        file_path = os.path.join(Masked_path, str(x))
+    for mask_filename in mask_files:
+       
+        base_name = mask_filename.replace('_mask', '')
+        image_filename = base_name 
+
+        image_path = os.path.join(image_folder, image_filename)
+        mask_path = os.path.join(mask_folder, mask_filename)
+
+        if not os.path.exists(image_path):
+            print(f"Image not found: {image_path}")
+            score = 'N/A'
+        else:
+            try:
+                score = colorvariationscore(image_path, mask_path)
+            except Exception as e:
+                print(f"Error processing {mask_filename}: {e}")
+                score = 'N/A'
+
+        results.append({'filename': image_filename, 'color_variation_score': score})
+
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+    print(f"Color variation scores saved to: {output_csv}")
+    
+def DiameterForAll(mask_folder, output_csv):
+    """
+    Calculates the maximum diameter for all mask images in a folder and saves the results to a CSV file.
+    """
+    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
+    results = []
+
+    for mask_filename in mask_files:
+        mask_path = os.path.join(mask_folder, mask_filename)
+
         try:
-            mask = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
-            _, binary_mask = cv2.threshold(mask, 127, 1, cv2.THRESH_BINARY)
-            diameter = get_diameter(binary_mask)
+            diameter = calculatediameter(mask_path)
         except Exception as e:
-            print(f"Error processing file {x}: {e}")
+            print(f"Error processing {mask_filename}: {e}")
             diameter = 'N/A'
 
-        results.append({'filename': x, 'diameter': diameter})
+        results.append({'filename': mask_filename, 'diameter_pixels': diameter})
 
-    resultsdf = pd.DataFrame(results, columns=['filename', 'diameter'])
-    resultsdf.to_csv(outputD, index=False)
-    print(f"Diameter scores saved to: {outputD}")
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+    print(f"Diameter scores saved to: {output_csv}")
 
-DiameterForAll(Masksfolder, outputD)
-
+# Asymmetryforall(Masksfolder, outputA)
+# IrregularityForAll(Masksfolder,outputB)
+# ColorVariationForAll(Imagefolder, Masksfolder, outputC)
+DiameterForAll(Masksfolder,outputD)
 
 
 # files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
