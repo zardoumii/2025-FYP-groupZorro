@@ -121,59 +121,59 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
 # IrregularityForAll(Masksfolder,outputB)
 # ColorVariationForAll(Imagefolder, Masksfolder, outputC)
 
-# files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
+files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
 
-# for x in files.file_list:
-#     file_path = join('/Users/youssefzardoumi/Desktop/imgs_part_1/'+str(x))
-#     save_dir = '/Users/youssefzardoumi/Desktop/Masked'
+for x in files.file_list:
+    file_path = join('/Users/youssefzardoumi/Desktop/imgs_part_1/'+str(x))
+    save_dir = '/Users/youssefzardoumi/Desktop/Masked'
 
-#     # read an image file
-#     img_rgb, img_gray = readImageFile(file_path)
+    # read an image file
+    img_rgb, img_gray = readImageFile(file_path)
 
-#     # apply hair removal
-#     blackhat, thresh, img_out = removeHair(img_rgb, img_gray, kernel_size=7, threshold=3)
+    # apply hair removal
+    blackhat, thresh, img_out = removeHair(img_rgb, img_gray, kernel_size=7, threshold=3)
 
-#     # plot the images
-#     plt.figure(figsize=(15, 10))
+    # plot the images
+    plt.figure(figsize=(15, 10))
 
-#     # save the output image
-#     save_file_path = join(save_dir, str('hairless_'+str(x)))
-#     saveImageFile(img_out, save_file_path)
-
-
-# def main(csv_path, save_path):
-#     # load dataset CSV file
-#     data_df = pd.read_csv(csv_path)
-
-#     # select only the baseline features.
-#     baseline_feats = [col for col in data_df.columns if col.startswith("feat_")]
-#     x_all = data_df[baseline_feats]
-#     y_all = data_df["label"]
-
-#     # split the dataset into training and testing sets.
-#     x_train, x_test, y_train, y_test = train_test_split(x_all, y_all, test_size=0.3, random_state=42)
-
-#     # train the classifier (using logistic regression as an example)
-#     clf = LogisticRegression(max_iter=1000, verbose=1)
-#     clf.fit(x_train, y_train)
-
-#     # test the trained classifier
-#     y_pred = clf.predict(x_test)
-#     acc = accuracy_score(y_test, y_pred)
-#     cm = confusion_matrix(y_test, y_pred)
-#     print("Test Accuracy:", acc)
-#     print("Confusion Matrix:\n", cm)
-
-#     # write test results to CSV.
-#     result_df = data_df.loc[x_test.index, ["filename"]].copy()
-#     result_df['true_label'] = y_test.values
-#     result_df['predicted_label'] = y_pred
-#     result_df.to_csv(save_path, index=False)
-#     print("Results saved to:", save_path)
+    # save the output image
+    save_file_path = join(save_dir, str('hairless_'+str(x)))
+    saveImageFile(img_out, save_file_path)
 
 
-# if __name__ == "__main__":
-#     csv_path = "./dataset.csv"
-#     save_path = "./result/result_baseline.csv"
+def main(csv_path, save_path):
+    # load dataset CSV file
+    data_df = pd.read_csv(csv_path)
 
-#     main(csv_path, save_path)
+    # select only the baseline features.
+    baseline_feats = [col for col in data_df.columns if col.startswith("feat_")]
+    x_all = data_df[baseline_feats]
+    y_all = data_df["label"]
+
+    # split the dataset into training and testing sets.
+    x_train, x_test, y_train, y_test = train_test_split(x_all, y_all, test_size=0.3, random_state=42)
+
+    # train the classifier (using logistic regression as an example)
+    clf = LogisticRegression(max_iter=1000, verbose=1)
+    clf.fit(x_train, y_train)
+
+    # test the trained classifier
+    y_pred = clf.predict(x_test)
+    acc = accuracy_score(y_test, y_pred)
+    cm = confusion_matrix(y_test, y_pred)
+    print("Test Accuracy:", acc)
+    print("Confusion Matrix:\n", cm)
+
+    # write test results to CSV.
+    result_df = data_df.loc[x_test.index, ["filename"]].copy()
+    result_df['true_label'] = y_test.values
+    result_df['predicted_label'] = y_pred
+    result_df.to_csv(save_path, index=False)
+    print("Results saved to:", save_path)
+
+
+if __name__ == "__main__":
+    csv_path = "./dataset.csv"
+    save_path = "./result/result_baseline.csv"
+
+    main(csv_path, save_path)
