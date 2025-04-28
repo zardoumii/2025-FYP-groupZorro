@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 from math import sqrt, floor, ceil, nan, pi
 from skimage import color, exposure
 from skimage.color import rgb2gray
@@ -15,11 +16,23 @@ from skimage.color import rgb2hsv
 from scipy.stats import circmean, circvar, circstd
 from statistics import variance, stdev
 from scipy.spatial import ConvexHull
+from concurrent.futures import ProcessPoolExecutor
+import os
+from os.path import join
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 
 
 def find_midpoint_v4(mask):
+        """
+        Find the midpoint of a binary mask using the horizontal center of mass and 
+        return the index of the column that is closest to the center of mass.
+
+        """
+        # sum all pixels in each column
         summed = np.sum(mask, axis=0)
+        # column where half of the total pixel mass is
         half_sum = np.sum(summed) / 2
         for i, n in enumerate(np.add.accumulate(summed)):
             if n > half_sum:
@@ -57,20 +70,62 @@ def processmaskasymmetry(mask_path):
         mask_path (str): Path to the mask image.
 
     Returns:
-        float: The asymmetry score of the mask.
+        float or str: The asymmetry score, or 'N/A' if the mask is invalid.
     """
-    # Load the mask as a grayscale image
-    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+    try:
+        # Load the mask as a grayscale image
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
 
-    # Ensure the mask is binary (convert to 0 and 1)
-    _, binary_mask = cv2.threshold(mask, 127, 1, cv2.THRESH_BINARY)
+        if mask is None:
+            raise ValueError("Failed to load mask image.")
 
-    # Calculate the asymmetry score
-    asymmetry_score = get_asymmetry(binary_mask)
+        # Ensure the mask is binary (convert to 0 and 1)
+        _, binary_mask = cv2.threshold(mask, 127, 1, cv2.THRESH_BINARY)
 
-    return asymmetry_score
+        # Calculate the asymmetry score
+        asymmetry_score = get_asymmetry(binary_mask)
+
+        return asymmetry_score
+
+    except Exception as e:
+        print(f"⚠️ Skipping bad mask {mask_path} due to error: {e}")
+        return 'N/A'
 
 
+def plot_asymmetry_scores_from_df(df):
 
+    def color_code_asymmetry(score):
+        if score < 100:
+            return 'green'
+        elif score < 200:
+            return 'yellow'
+        elif score < 300:
+            return 'orange'
+        else:
+            return 'red'
 
+    df['color'] = df['asymmetry_score'].apply(color_code_asymmetry)
 
+    df = df.sort_values('asymmetry_score')
+
+    plt.figure(figsize=(14, 8))
+    bars = plt.barh(range(len(df)), df['asymmetry_score'], color=df['color'])
+    plt.xlabel('Asymmetry Score')
+    plt.ylabel('Lesions')
+    plt.title('Asymmetry Scores')
+    plt.grid(axis='x', linestyle='--', alpha=0.7)
+
+    # legend
+    green_patch = mpatches.Patch(color='green', label='Safe (<100)')
+    yellow_patch = mpatches.Patch(color='yellow', label='Caution (100-199)')
+    orange_patch = mpatches.Patch(color='orange', label='Warning (200-299)')
+    red_patch = mpatches.Patch(color='red', label='High Risk (300+)')
+    plt.legend(handles=[green_patch, yellow_patch, orange_patch, red_patch], loc='lower right')
+
+    plt.tight_layout()
+    plt.show()
+
+    # top 20 lesions with highest asymmetry
+    print("\nTop 20 lesions with highest asymmetry:")
+    top_20 = df.sort_values('asymmetry_score', ascending=False).head(20)
+    print(top_20[['filename', 'asymmetry_score', 'color']])
