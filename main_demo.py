@@ -8,26 +8,32 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
+from os.path import join
+import matplotlib.pyplot as plt
+from concurrent.futures import ProcessPoolExecutor
 from util.img_util import readImageFile, saveImageFile, ImageDataLoader, isbordertouching, inspectborders
 from util.inpaint_util import removeHair
 from util.feature_A import processmaskasymmetry
+from util.feature_A import plot_asymmetry_scores_from_df
 from util.feature_B import measureborderirregularity
 from util.feature_C import colorvariationscore
 from util.feature_D import calculatediameter
-from os.path import join
+from util.feature_blue_veil import BlueWhiteVeilForAll
+from util.merge_features import merge_features
 
-import matplotlib.pyplot as plt
-
-"""Adjust paths Bbelow according to your directory structure"""
+"""Adjust paths below according to your directory structure"""
 # Directory where all the images are stored
-Imagefolder = '/Users/youssefzardoumi/Desktop/imgs_part_1'
+Imagefolder = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\images'
 # Directory where all the masked images are stored
-Masksfolder = '/Users/youssefzardoumi/Desktop/Masked'
+Masksfolder = r"C:\Users\DaraGeorgieva\Documents\lesion_masks\lesion_masks"
 # Directory where Features results will be saved
-outputA = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/asymmetryscores.csv'
-outputB = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/irregularityscores.csv'
-outputC = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/colorvariation.csv'
-outputD = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/diameterscores.csv'
+outputA = outputA = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\asymmetryscores.csv'
+outputB = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\borderscores.csv'
+outputC = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\colorvariancescores.csv'
+outputBV = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\blue_white_veil.csv'
+outputD = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\diameter.csv'
+
+
 
 # inspectborders(
 #     csv_path="//dataset.csv",
@@ -36,49 +42,101 @@ outputD = '/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Fin
 #     threshold=0.05  # 5% of border touching the image edge
 # )
 
-def Asymmetryforall(Masked_path, outputA):
-    """
-    Processes all mask files in the given folder and calculates their asymmetry scores.
-    """
+def perform_hair_removal_if_needed(Imagefolder, metadata_path):
+    save_dir = os.path.join(Imagefolder, 'hairless')
+
+    if os.path.exists(save_dir) and len(os.listdir(save_dir)) > 0:
+        print(f"Hairless folder already exists at {save_dir}. Skipping hair removal.")
+    else:
+        print("Applying hair removal to images...")
+        files = ImageDataLoader(metadata_path)
+        os.makedirs(save_dir, exist_ok=True)
+
+        for filename in files.file_list:
+            img_path = os.path.join(Imagefolder, filename)
+            try:
+                img_rgb, img_gray = readImageFile(img_path)
+                blackhat = cv2.morphologyEx(img_gray, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (7,7)))
+                _, thresh = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY)
+                img_out = cv2.inpaint(img_rgb, thresh, 1, cv2.INPAINT_TELEA)
+
+                save_path = os.path.join(save_dir, filename)
+                saveImageFile(img_out, save_path)
+            except Exception as e:
+                print(f"Error processing {filename}: {e}")
+
+    return save_dir
+
+# def Asymmetryforall(Masked_path, outputA):
+#     """
+#     Processes all mask files in the given folder and calculates their asymmetry scores.
+#     """
     
-    files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
+#     files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
+
+#     results = []
+    
+#     for x in files:
+#         file_path = join(Masked_path, str(x))
+#         try:
+#             asymmetry_score = processmaskasymmetry(file_path)
+#         except Exception as e:
+#             asymmetry_score = 'N/A'
+            
+#         results.append({'filename': x, 'asymmetry_score': asymmetry_score})
+
+#     resultsdf = pd.DataFrame(results, columns=['filename', 'asymmetry_score'])
+#     resultsdf.to_csv(outputA, index=False)
+#     print(f"Asymmetry scores saved to: {outputA}")
+
+def Asymmetryforall_fast(Masked_path, output_csv, max_workers=4):
+    """
+    Fast version of processing masks using multiprocessing.
+    """
+    # Only real mask files (no weird Mac files)
+    files = [f for f in os.listdir(Masked_path) if f.endswith('.png') and not f.startswith('._')]
+    files = [join(Masked_path, f) for f in files]  # Full path
 
     results = []
-    
-    for x in files:
-        file_path = join(Masked_path, str(x))
-        try:
-            asymmetry_score = processmaskasymmetry(file_path)
-        except Exception as e:
-            asymmetry_score = 'N/A'
-            
-        results.append({'filename': x, 'asymmetry_score': asymmetry_score})
 
-    resultsdf = pd.DataFrame(results, columns=['filename', 'asymmetry_score'])
-    resultsdf.to_csv(outputA, index=False)
-    print(f"Asymmetry scores saved to: {outputA}")
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        for filepath, score in zip(files, executor.map(processmaskasymmetry, files)):
+            clean_filename = os.path.basename(filepath).replace('_mask', '')
+            results.append({'filename': clean_filename, 'asymmetry_score': score})
+
+
+    resultsdf = pd.DataFrame(results)
+    resultsdf.to_csv(output_csv, index=False)
+    print(f"Asymmetry scores saved to: {output_csv}")
+    
+
     
 def IrregularityForAll(masked_path, output_csv):
     """
     Processes all mask files in the given folder and calculates their border irregularity scores.
     Saves the results to a CSV file.
     """
-    files = [f for f in os.listdir(masked_path) if f.endswith('.png')]
+
+    mask_files = [f for f in os.listdir(masked_path) if f.endswith('.png') and not f.startswith('._')]
 
     results = []
 
-    for filename in files:
+    for filename in mask_files:
         file_path = join(masked_path, filename)
         try:
             score = measureborderirregularity(file_path)
         except Exception as e:
+            print(f"Error processing {filename}: {e}")
             score = 'N/A'
 
-        results.append({'filename': filename, 'irregularity_score': score})
+        clean_filename = filename.replace('_mask', '')
+        results.append({'filename': clean_filename, 'irregularity_score': score})
+
 
     df = pd.DataFrame(results, columns=['filename', 'irregularity_score'])
     df.to_csv(output_csv, index=False)
     print(f"Irregularity scores saved to: {output_csv}")
+
     
     
     
@@ -115,65 +173,108 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
     df.to_csv(output_csv, index=False)
     print(f"Color variation scores saved to: {output_csv}")
     
+def DiameterForAll(mask_folder, output_csv):
+    """
+    Calculates the maximum diameter for all mask images in a folder and saves the results to a CSV file.
+    """
+    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
+    results = []
 
+    for mask_filename in mask_files:
+        mask_path = os.path.join(mask_folder, mask_filename)
 
-# Asymmetryforall(Masksfolder, outputA)
-# IrregularityForAll(Masksfolder,outputB)
-# ColorVariationForAll(Imagefolder, Masksfolder, outputC)
+        try:
+            diameter = calculatediameter(mask_path)
+        except Exception as e:
+            print(f"Error processing {mask_filename}: {e}")
+            diameter = 'N/A'
 
-files=ImageDataLoader('/Users/youssefzardoumi/Desktop/dataset.csv')
+        results.append({'filename': mask_filename, 'diameter_pixels': diameter})
 
-for x in files.file_list:
-    file_path = join('/Users/youssefzardoumi/Desktop/imgs_part_1/'+str(x))
-    save_dir = '/Users/youssefzardoumi/Desktop/Masked'
-
-    # read an image file
-    img_rgb, img_gray = readImageFile(file_path)
-
-    # apply hair removal
-    blackhat, thresh, img_out = removeHair(img_rgb, img_gray, kernel_size=7, threshold=3)
-
-    # plot the images
-    plt.figure(figsize=(15, 10))
-
-    # save the output image
-    save_file_path = join(save_dir, str('hairless_'+str(x)))
-    saveImageFile(img_out, save_file_path)
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+    print(f"Diameter scores saved to: {output_csv}")
 
 
 def main(csv_path, save_path):
-    # load dataset CSV file
-    data_df = pd.read_csv(csv_path)
+    """ Main function for feature extraction and demo """
 
-    # select only the baseline features.
-    baseline_feats = [col for col in data_df.columns if col.startswith("feat_")]
-    x_all = data_df[baseline_feats]
-    y_all = data_df["label"]
+    global Imagefolder  # Add this to modify Imagefolder globally
 
-    # split the dataset into training and testing sets.
-    x_train, x_test, y_train, y_test = train_test_split(x_all, y_all, test_size=0.3, random_state=42)
+    # 0. Hair removal
+    Imagefolder = perform_hair_removal_if_needed(Imagefolder, metadata_path)
 
-    # train the classifier (using logistic regression as an example)
-    clf = LogisticRegression(max_iter=1000, verbose=1)
-    clf.fit(x_train, y_train)
 
-    # test the trained classifier
-    y_pred = clf.predict(x_test)
-    acc = accuracy_score(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred)
-    print("Test Accuracy:", acc)
-    print("Confusion Matrix:\n", cm)
+    # 1. Asymmetry feature extraction
+    if not os.path.exists(outputA):
+        print("Asymmetry CSV not found. Computing asymmetry features...")
+        Asymmetryforall_fast(Masksfolder, outputA)
+    else:
+        print("Asymmetry CSV already exists. Skipping recomputation.")
 
-    # write test results to CSV.
-    result_df = data_df.loc[x_test.index, ["filename"]].copy()
-    result_df['true_label'] = y_test.values
-    result_df['predicted_label'] = y_pred
-    result_df.to_csv(save_path, index=False)
-    print("Results saved to:", save_path)
+    # get the cool plot of asymmetry scores
+    # df = pd.read_csv(outputA)
+    # plot_asymmetry_scores_from_df(df)
+
+
+    # 2. Border Irregularity extraction
+    if not os.path.exists(outputB):
+        print("Irregularity CSV not found. Computing irregularity features...")
+        IrregularityForAll(Masksfolder, outputB)
+    else:
+        print("Irregularity CSV already exists. Skipping recomputation.")
+
+    # TO DO: Add a pretty plot of irregularity scores
+    # df = pd.read_csv(outputB)
+    # plot_irregularity_scores_from_df(df)
+
+    # 3. Color Variation extraction
+    if not os.path.exists(outputC):
+        print("Color Variation CSV not found. Computing color features...")
+        ColorVariationForAll(Imagefolder, Masksfolder, outputC)
+    else:
+        print("Color Variation CSV already exists. Skipping recomputation.")
+    # TO DO: Add a pretty plot of color variation scores
+    # df = pd.read_csv(outputC)
+    # plot_color_variation_scores_from_df(df)
+
+    # 4. Blue Veil Feature extraction
+    if not os.path.exists(outputBV):
+        print("Blue Veil CSV not found. Computing blue veil features...")
+        BlueWhiteVeilForAll(Imagefolder, Masksfolder, outputBV)
+    else:
+        print("Blue Veil CSV already exists. Skipping recomputation.")
+    # TO DO: Add a pretty plot of blue veil scores maybe with different shades of blue
+    # df = pd.read_csv(outputBV)
+    # plot_blue_veil_scores_from_df(df)
+
+
+def merge_metadata(final_dataset_path, metadata_path):
+    dataset = pd.read_csv(final_dataset_path)
+    metadata = pd.read_csv(metadata_path)
+
+    merged = dataset.merge(metadata[['img_id', 'diagnostic']], left_on='filename', right_on='img_id', how='left')
+    merged['label'] = merged['diagnostic'].apply(lambda x: 1 if x == 'MEL' else 0)
+    merged = merged.drop(columns=['img_id', 'diagnostic'])
+    merged.to_csv(final_dataset_path, index=False)
+
+    print(f"Metadata merged and label column added to {final_dataset_path}")
+
 
 
 if __name__ == "__main__":
-    csv_path = "./dataset.csv"
-    save_path = "./result/result_baseline.csv"
+    output_folder = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result'
+    final_dataset_path = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\dataset.csv'
+    model_result_path = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\result_baseline.csv'
+    metadata_path = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\metadata.csv'
 
-    main(csv_path, save_path)
+    
+    # extract Features 
+    main(None, None)  
+
+    # merge Features
+    merge_features(output_folder, final_dataset_path)
+
+    # merge metadata
+    metadata_path = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\metadata.csv'
+    merge_metadata(final_dataset_path, metadata_path)
