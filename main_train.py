@@ -2,34 +2,51 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-from sklearn.model_selection import train_test_split
+from sklearn.cluster import KMeans
+from sklearn.model_selection import GroupShuffleSplit
+from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, ConfusionMatrixDisplay,
     roc_curve, auc
 )
+from xgboost import XGBClassifier
 
 def main_train(dataset_path):
     try:
-        # Make folders for outputs
         os.makedirs('outputs/confusion_matrices', exist_ok=True)
         os.makedirs('outputs/plots', exist_ok=True)
 
+        # Load features → Standardize them → Cluster similar lesions → Group-aware split → Honest training/testing.
         df = pd.read_csv(dataset_path)
         feature_cols = ['asymmetry_score', 'irregularity_score', 'color_variation_score', 'blue_white_veil_score']
         X = df[feature_cols]
         y = df['label']
 
-        # Train/Test Split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+
+        kmeans = KMeans(n_clusters=100, random_state=42)
+        df['cluster'] = kmeans.fit_predict(X_scaled)
+
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.3, random_state=42)
+        for train_idx, test_idx in gss.split(X_scaled, y, groups=df['cluster']):
+            X_train = X.iloc[train_idx]
+            y_train = y.iloc[train_idx]
+            X_test = X.iloc[test_idx]
+            y_test = y.iloc[test_idx]
 
         models = {
-            'Logistic Regression': LogisticRegression(max_iter=1000, class_weight='balanced'),
-            'Decision Tree': DecisionTreeClassifier(class_weight='balanced'),
-            'KNN': KNeighborsClassifier(n_neighbors=5)
+            'Logistic Regression': LogisticRegression(max_iter=1000, class_weight='balanced', penalty='l1', solver='liblinear'),
+            'Decision Tree': DecisionTreeClassifier(max_depth=5, min_samples_leaf=5, class_weight='balanced', random_state=42),
+            'Random Forest': RandomForestClassifier(n_estimators=100, max_depth=5, class_weight='balanced', random_state=42),
+            'KNN': KNeighborsClassifier(n_neighbors=5, weights='distance', algorithm='auto', n_jobs=-1)
         }
 
         results = {}
@@ -47,7 +64,12 @@ def main_train(dataset_path):
             f1 = f1_score(y_test, y_pred, zero_division=0)
             cm = confusion_matrix(y_test, y_pred)
 
-            fpr, tpr, _ = roc_curve(y_test, y_pred)
+            if hasattr(model, "predict_proba"):
+                y_scores = model.predict_proba(X_test)[:, 1]
+            else:
+                y_scores = y_pred
+
+            fpr, tpr, _ = roc_curve(y_test, y_scores)
             roc_auc = auc(fpr, tpr)
 
             results[name] = {
@@ -62,7 +84,6 @@ def main_train(dataset_path):
             auc_scores[name] = roc_auc
             fpr_tpr_data[name] = (fpr, tpr)
 
-            # Save individual model predictions
             for true_label, pred_label in zip(y_test, y_pred):
                 all_predictions.append({
                     'Model': name,
@@ -70,7 +91,6 @@ def main_train(dataset_path):
                     'Predicted Label': pred_label
                 })
 
-            # Save confusion matrix plots
             confusion_matrix_path = f"outputs/confusion_matrices/confusion_{name.replace(' ', '_')}.png"
             if not os.path.exists(confusion_matrix_path):
                 disp = ConfusionMatrixDisplay(confusion_matrix=cm)
@@ -80,14 +100,13 @@ def main_train(dataset_path):
                 plt.savefig(confusion_matrix_path)
                 plt.close()
 
-        # Accuracy comparison bar chart between models
         model_names = list(results.keys())
         accuracies = [results[m]['Accuracy'] for m in model_names]
 
         accuracy_chart_path = 'outputs/plots/accuracy_comparison.png'
         if not os.path.exists(accuracy_chart_path):
             plt.figure(figsize=(10,6))
-            plt.bar(model_names, accuracies, color=['skyblue', 'lightgreen', 'salmon'])
+            plt.bar(model_names, accuracies, color=['skyblue', 'lightgreen', 'salmon', 'orange', 'purple', 'gray'])
             plt.ylabel('Accuracy')
             plt.title('Comparison of Classifier Accuracies')
             plt.ylim(0, 1)
@@ -95,7 +114,6 @@ def main_train(dataset_path):
             plt.savefig(accuracy_chart_path)
             plt.close()
 
-        # ROC curves
         roc_curve_path = 'outputs/plots/roc_curves.png'
         if not os.path.exists(roc_curve_path):
             plt.figure(figsize=(10,8))
@@ -112,7 +130,6 @@ def main_train(dataset_path):
             plt.savefig(roc_curve_path)
             plt.close()
 
-        # Save all outputs only if not already existing
         predictions_path = 'outputs/model_predictions.csv'
         if not os.path.exists(predictions_path):
             predictions_df = pd.DataFrame(all_predictions)
@@ -134,5 +151,5 @@ def main_train(dataset_path):
         print(f"\n Error occurred during training: {str(e)}")
 
 if __name__ == "__main__":
-    dataset_path = r"PATH TO DATASET.CSV"
+    dataset_path = r"C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\dataset.csv"
     main_train(dataset_path)

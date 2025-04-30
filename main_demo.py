@@ -23,15 +23,15 @@ from util.merge_features import merge_features
 
 """Adjust paths below according to your directory structure"""
 # Directory where all the images are stored
-Imagefolder = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\images'
+Imagefolder = r'D:\zr7vgbcyr2-1\images'
 # Directory where all the masked images are stored
-Masksfolder = r"C:\Users\DaraGeorgieva\Documents\lesion_masks\lesion_masks"
+Masksfolder = r"C:\Users\Dara\Desktop\itu\lesion_masks"
 # Directory where Features results will be saved
-outputA = outputA = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\asymmetryscores.csv'
-outputB = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\borderscores.csv'
-outputC = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\colorvariancescores.csv'
-outputBV = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\blue_white_veil.csv'
-outputD = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\diameter.csv'
+outputA = outputA = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\asymmetryscores.csv'
+outputB = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\borderscores.csv'
+outputC = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\colorvariancescores.csv'
+outputBV = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\blue_white_veil.csv'
+outputD = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\result\diameter.csv'
 
 
 
@@ -263,10 +263,10 @@ def merge_metadata(final_dataset_path, metadata_path):
 
 
 if __name__ == "__main__":
-    output_folder = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result'
-    final_dataset_path = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\dataset.csv'
-    model_result_path = r'C:\Users\DaraGeorgieva\Documents\2025-FYP-Final\2025-FYP-Final\result\result_baseline.csv'
-    metadata_path = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\metadata.csv'
+    output_folder = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result'
+    final_dataset_path = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\dataset.csv'
+    model_result_path = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\result_baseline.csv'
+    metadata_path = r'D:\zr7vgbcyr2-1\metadata.csv'
 
     
     # extract Features 
@@ -276,5 +276,4 @@ if __name__ == "__main__":
     merge_features(output_folder, final_dataset_path)
 
     # merge metadata
-    metadata_path = r'C:\Users\DaraGeorgieva\Documents\zr7vgbcyr2-1\metadata.csv'
     merge_metadata(final_dataset_path, metadata_path)
