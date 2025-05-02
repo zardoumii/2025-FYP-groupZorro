@@ -22,7 +22,7 @@ def main_train(dataset_path):
         os.makedirs('outputs/confusion_matrices', exist_ok=True)
         os.makedirs('outputs/plots', exist_ok=True)
 
-        # Load features → Standardize them → Cluster similar lesions → Group-aware split → Honest training/testing.
+        # Load the features → Standardize them → Cluster similar lesions → Group-aware split → Honest training/testing.
         df = pd.read_csv(dataset_path)
         feature_cols = ['asymmetry_score', 'irregularity_score', 'color_variation_score', 'blue_white_veil_score']
         X = df[feature_cols]
