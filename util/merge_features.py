@@ -11,16 +11,19 @@ def merge_features(output_folder, metadata_path):
     irregularity_path = os.path.join(output_folder, 'irregularity_scores.csv')
     colorvariation_path = os.path.join(output_folder, 'color_variation_scores.csv')
     bluewhiteveil_path = os.path.join(output_folder, 'blue_veil_scores.csv')  
+    hairratio_path = os.path.join(output_folder, 'hair_ratio.csv')
 
     df_asym = pd.read_csv(asymmetry_path)
     df_irreg = pd.read_csv(irregularity_path)
     df_color = pd.read_csv(colorvariation_path)
     df_bluewhite = pd.read_csv(bluewhiteveil_path)
+    df_hair = pd.read_csv(hairratio_path)
 
     # merge features
     merged_df = df_asym.merge(df_irreg, on='filename')
     merged_df = merged_df.merge(df_color, on='filename')
     merged_df = merged_df.merge(df_bluewhite, on='filename')
+    merged_df = merged_df.merge(df_hair, on='filename')
 
     merged_df = merged_df.replace('N/A', pd.NA)
     merged_df = merged_df.fillna(0)
