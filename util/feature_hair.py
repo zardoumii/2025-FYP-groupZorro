@@ -8,11 +8,11 @@ import os
 import numpy as np
 import csv
 
-def hairratioandremoval(Imagefolder, metadata_path):
+def hairratioandremoval(Imagefolder, metadata_path, output_csv):
     save_dir = os.path.join(Imagefolder, 'hairless')
-    csv_path = os.path.join('/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/haircoverageratios.csv')
+    csv_path = os.path.join(output_csv, 'hair_ratio.csv')
 
-    if os.path.exists(save_dir) and len(os.listdir(save_dir)) and os.path.exists(csv_path) > 0:
+    if os.path.exists(save_dir) and len(os.listdir(save_dir)) > 0:
         print(f"Hairless folder already exists at {save_dir}. Skipping hair removal.")
     else:
         print("Applying hair removal to images...")
