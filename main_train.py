@@ -102,6 +102,7 @@ def main_train(dataset_path):
 
         model_names = list(results.keys())
         accuracies = [results[m]['Accuracy'] for m in model_names]
+        recalls = [results[m]['Recall'] for m in model_names]
 
         accuracy_chart_path = 'outputs/plots/accuracy_comparison.png'
         if not os.path.exists(accuracy_chart_path):
@@ -114,6 +115,17 @@ def main_train(dataset_path):
             plt.savefig(accuracy_chart_path)
             plt.close()
 
+        recall_chart_path = 'outputs/plots/recall_comparison.png'
+        if not os.path.exists(recall_chart_path):
+            plt.figure(figsize=(10,6))
+            plt.bar(model_names, recalls, color=['skyblue', 'lightgreen', 'salmon', 'orange', 'purple', 'gray'])
+            plt.ylabel('Recall')
+            plt.title('Comparison of Classifier Recalls')
+            plt.ylim(0, 1)
+            plt.grid(axis='y', linestyle='--', alpha=0.7)
+            plt.savefig(recall_chart_path)
+            plt.close()
+            
         roc_curve_path = 'outputs/plots/roc_curves.png'
         if not os.path.exists(roc_curve_path):
             plt.figure(figsize=(10,8))
