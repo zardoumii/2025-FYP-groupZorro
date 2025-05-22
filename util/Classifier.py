@@ -39,46 +39,14 @@ from sklearn.base import clone
 
 
 
-def merge_metadata(final_dataset_path, metadata_path):
-    final_dataset_path = os.path.join(final_dataset_path, 'dataset.csv')
-    dataset = pd.read_csv(final_dataset_path)
-    metadata = pd.read_csv(metadata_path)
-
-    merged = dataset.merge(metadata[['img_id', 'diagnostic']], left_on='filename', right_on='img_id', how='left')
-    merged['label'] = merged['diagnostic'].apply(lambda x: 1 if x == 'MEL' else 0)
-    merged = merged.drop(columns=['img_id', 'diagnostic'])
-    merged.to_csv(final_dataset_path, index=False)
-
-    print(f"Metadata merged and label column added to {final_dataset_path}")
 
 
 
 
 
 
-def bootstrap_sample(X, y, n_samples=None, random_state=None):
-    """
-    Create a bootstrap sample of the data.
-    
-    Args:
-        X: Feature matrix
-        y: Target vector
-        n_samples: Number of samples to generate (default: same as input)
-        random_state: Random state for reproducibility
-    
-    Returns:
-        X_bootstrap, y_bootstrap: Bootstrap samples
-    """
-    if n_samples is None:
-        n_samples = len(X)
-    
-    rng = np.random.RandomState(random_state)
-    indices = rng.randint(0, len(X), size=n_samples)
-    
-    if isinstance(X, np.ndarray):
-        return X[indices], y.iloc[indices] if isinstance(y, pd.Series) else y[indices]
-    else:
-        return X.iloc[indices], y.iloc[indices]
+
+
 
 def run_evaluation(X_train, X_test, y_train, y_test, models, use_bootstrap=False, n_additional_true=100):
     """
@@ -136,19 +104,7 @@ def run_evaluation(X_train, X_test, y_train, y_test, models, use_bootstrap=False
     
     return results, predictions, confusion_matrices
 
-def convert_to_serializable(obj):
-    """Convert numpy arrays and other non-serializable objects to Python native types."""
-    if isinstance(obj, np.ndarray):
-        return obj.tolist()
-    elif isinstance(obj, dict):
-        return {key: convert_to_serializable(value) for key, value in obj.items()}
-    elif isinstance(obj, (list, tuple)):
-        return [convert_to_serializable(item) for item in obj]
-    elif isinstance(obj, np.integer):
-        return int(obj)
-    elif isinstance(obj, np.floating):
-        return float(obj)
-    return obj
+
 
 def main_train(dataset_path):
     try:
