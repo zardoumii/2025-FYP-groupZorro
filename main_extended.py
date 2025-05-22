@@ -4,7 +4,6 @@ import os
 import cv2
 import pandas as pd
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
@@ -20,43 +19,35 @@ from util.feature_C import colorvariationscore
 from util.feature_hair import hairratioandremoval
 from util.feature_blue_veil import BlueWhiteVeilForAll
 from util.merge_features import merge_features
+from util.Classifier import run_evaluation, convert_to_serializable, main_train
+from sklearn.cluster import KMeans
+from sklearn.model_selection import GroupShuffleSplit
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, ConfusionMatrixDisplay,
+    roc_curve, auc
+)
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import ShuffleSplit
+from imblearn.combine import SMOTEENN
+from collections import Counter
+import json
+from sklearn.model_selection import KFold
+from sklearn.base import clone
 
 
 
 
 
-
-
-# inspectborders(
-#     csv_path="//dataset.csv",
-#     mask_folder="/Masked",
-#     save_folder="/manual_inspection",
-#     threshold=0.05  # 5% of border touching the image edge
-# )
-
-
-
-# def Asymmetryforall(Masked_path, outputA):
-#     """
-#     Processes all mask files in the given folder and calculates their asymmetry scores.
-#     """
-    
-#     files = [f for f in os.listdir(Masked_path) if f.endswith('.png')]
-
-#     results = []
-    
-#     for x in files:
-#         file_path = join(Masked_path, str(x))
-#         try:
-#             asymmetry_score = processmaskasymmetry(file_path)
-#         except Exception as e:
-#             asymmetry_score = 'N/A'
-            
-#         results.append({'filename': x, 'asymmetry_score': asymmetry_score})
-
-#     resultsdf = pd.DataFrame(results, columns=['filename', 'asymmetry_score'])
-#     resultsdf.to_csv(outputA, index=False)
-#     print(f"Asymmetry scores saved to: {outputA}")
 
 def Asymmetryforall_fast(Masked_path, output_csv, max_workers=4):
     """
@@ -147,13 +138,13 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
 
 
 
-def main(csv_path, save_path):
+def extract_features(csv_path, save_path):
     """ Main function for feature extraction and demo """
 
-    global Imagefolder  # Add this to modify Imagefolder globally
-
+    global Imagefolder  
+    admin = 1
     # 0. Hair removal
-    Imagefolder = hairratioandremoval(Imagefolder, metadata_path, output_folder)
+    Imagefolder = hairratioandremoval(Imagefolder, filenames, output_folder, admin)
 
 
     # 1. Asymmetry feature extraction
@@ -163,9 +154,7 @@ def main(csv_path, save_path):
     else:
         print("Asymmetry CSV already exists. Skipping recomputation.")
 
-    # get the cool plot of asymmetry scores
-    # df = pd.read_csv(outputA)
-    # plot_asymmetry_scores_from_df(df)
+
 
 
     # 2. Border Irregularity extraction
@@ -175,9 +164,6 @@ def main(csv_path, save_path):
     else:
         print("Irregularity CSV already exists. Skipping recomputation.")
 
-    # TO DO: Add a pretty plot of irregularity scores
-    # df = pd.read_csv(outputB)
-    # plot_irregularity_scores_from_df(df)
 
     # 3. Color Variation extraction
     if not os.path.exists(os.path.join(output_folder, 'color_variation_scores.csv')):
@@ -185,9 +171,7 @@ def main(csv_path, save_path):
         ColorVariationForAll(Imagefolder, Masksfolder, output_folder)
     else:
         print("Color Variation CSV already exists. Skipping recomputation.")
-    # TO DO: Add a pretty plot of color variation scores
-    # df = pd.read_csv(outputC)
-    # plot_color_variation_scores_from_df(df)
+
 
     # 4. Blue Veil Feature extraction
     if not os.path.exists(os.path.join(output_folder, 'blue_veil_scores.csv')):
@@ -195,9 +179,7 @@ def main(csv_path, save_path):
         BlueWhiteVeilForAll(Imagefolder, Masksfolder, output_folder)
     else:
         print("Blue Veil CSV already exists. Skipping recomputation.")
-    # TO DO: Add a pretty plot of blue veil scores maybe with different shades of blue
-    # df = pd.read_csv(outputBV)
-    # plot_blue_veil_scores_from_df(df)
+
 
 
 def merge_metadata(final_dataset_path, metadata_path):
@@ -214,17 +196,27 @@ def merge_metadata(final_dataset_path, metadata_path):
 
 
 
+
+
 if __name__ == "__main__":
     
-    """Adjust paths below according to your directory structure"""
-    output_folder = r'/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/'
-    model_result_path = r'/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/result_baseline.csv'
-    metadata_path = r'/Users/youssefzardoumi/Desktop/metadata.csv'
-    Masksfolder = r"/Users/youssefzardoumi/Desktop/Masked"
-    Imagefolder = r'/Users/youssefzardoumi/Desktop/imgs_part_1'
+    """Adjust paths below according to your directory structure eg. /Users/youssefzardoumi/Desktop/ProjectsinData/2025-FYP-Final"""
+    """"""
+    path = 'INSERT HERE/2025-FYP-Final'  # Base directory path - removed trailing slash
+    """"""
+    # Define all paths relative to the base path - removed extra forward slashes
+    output_folder = os.path.join(path, 'result')
+    metadata_path = os.path.join(path, 'data', 'metadata.csv')  # Moved to base directory
+    Masksfolder = os.path.join(path, 'data', 'Masks')
+    Imagefolder = os.path.join(path, 'data', 'images')
+    dataset_path = os.path.join(path, 'result', 'dataset.csv')
+    filenames = os.path.join(path, 'dataset.csv')
     
     # extract Features 
-    main(None, None)  
+    extract_features(None, None)  
     
     # merge Features
     merge_features(output_folder, metadata_path)
+    
+    # train model
+    main_train(dataset_path)

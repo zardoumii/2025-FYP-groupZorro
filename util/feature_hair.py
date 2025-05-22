@@ -8,7 +8,7 @@ import os
 import numpy as np
 import csv
 
-def hairratioandremoval(Imagefolder, metadata_path, output_csv):
+def hairratioandremoval(Imagefolder, metadata_path, output_csv, x):
     save_dir = os.path.join(Imagefolder, 'hairless')
     csv_path = os.path.join(output_csv, 'hair_ratio.csv')
 
@@ -28,8 +28,9 @@ def hairratioandremoval(Imagefolder, metadata_path, output_csv):
                 try:
                     img_rgb, img_gray = readImageFile(img_path)
                     blackhat, whitehat, combined_mask, img_out = removeHair(img_rgb, img_gray, kernel_size=13, black_thresh=100, white_thresh=10)
-                    
-                    hair_coverage_ratio = np.sum(combined_mask > 0) / combined_mask.size
+                    if x == 1:
+                        hair_coverage_ratio = np.sum(combined_mask > 0) / combined_mask.size
+
 
                     
                     save_path = os.path.join(save_dir, filename)
