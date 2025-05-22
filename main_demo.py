@@ -17,21 +17,13 @@ from util.feature_A import processmaskasymmetry
 from util.feature_A import plot_asymmetry_scores_from_df
 from util.feature_B import measureborderirregularity
 from util.feature_C import colorvariationscore
-from util.feature_D import calculatediameter
+from util.feature_hair import hairratioandremoval
 from util.feature_blue_veil import BlueWhiteVeilForAll
 from util.merge_features import merge_features
 
-"""Adjust paths below according to your directory structure"""
-# Directory where all the images are stored
-Imagefolder = r'D:\zr7vgbcyr2-1\images'
-# Directory where all the masked images are stored
-Masksfolder = r"C:\Users\Dara\Desktop\itu\lesion_masks"
-# Directory where Features results will be saved
-outputA = outputA = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\asymmetryscores.csv'
-outputB = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\borderscores.csv'
-outputC = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\colorvariancescores.csv'
-outputBV = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\blue_white_veil.csv'
-outputD = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\result\diameter.csv'
+
+
+
 
 
 
@@ -42,30 +34,7 @@ outputD = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\result\diameter.csv'
 #     threshold=0.05  # 5% of border touching the image edge
 # )
 
-def perform_hair_removal_if_needed(Imagefolder, metadata_path):
-    save_dir = os.path.join(Imagefolder, 'hairless')
 
-    if os.path.exists(save_dir) and len(os.listdir(save_dir)) > 0:
-        print(f"Hairless folder already exists at {save_dir}. Skipping hair removal.")
-    else:
-        print("Applying hair removal to images...")
-        files = ImageDataLoader(metadata_path)
-        os.makedirs(save_dir, exist_ok=True)
-
-        for filename in files.file_list:
-            img_path = os.path.join(Imagefolder, filename)
-            try:
-                img_rgb, img_gray = readImageFile(img_path)
-                blackhat = cv2.morphologyEx(img_gray, cv2.MORPH_BLACKHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (7,7)))
-                _, thresh = cv2.threshold(blackhat, 10, 255, cv2.THRESH_BINARY)
-                img_out = cv2.inpaint(img_rgb, thresh, 1, cv2.INPAINT_TELEA)
-
-                save_path = os.path.join(save_dir, filename)
-                saveImageFile(img_out, save_path)
-            except Exception as e:
-                print(f"Error processing {filename}: {e}")
-
-    return save_dir
 
 # def Asymmetryforall(Masked_path, outputA):
 #     """
@@ -93,6 +62,7 @@ def Asymmetryforall_fast(Masked_path, output_csv, max_workers=4):
     """
     Fast version of processing masks using multiprocessing.
     """
+    output_csv = os.path.join(output_csv, 'asymmetry_scores.csv')
     # Only real mask files (no weird Mac files)
     files = [f for f in os.listdir(Masked_path) if f.endswith('.png') and not f.startswith('._')]
     files = [join(Masked_path, f) for f in files]  # Full path
@@ -116,7 +86,7 @@ def IrregularityForAll(masked_path, output_csv):
     Processes all mask files in the given folder and calculates their border irregularity scores.
     Saves the results to a CSV file.
     """
-
+    output_csv = os.path.join(output_csv, 'irregularity_scores.csv')
     mask_files = [f for f in os.listdir(masked_path) if f.endswith('.png') and not f.startswith('._')]
 
     results = []
@@ -146,6 +116,7 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
     Computes color variation scores for all image-mask pairs in specified folders and stores results.
     
     """
+    output_csv = os.path.join(output_csv, 'color_variation_scores.csv')
     mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
     results = []
 
@@ -173,27 +144,7 @@ def ColorVariationForAll(image_folder, mask_folder, output_csv):
     df.to_csv(output_csv, index=False)
     print(f"Color variation scores saved to: {output_csv}")
     
-def DiameterForAll(mask_folder, output_csv):
-    """
-    Calculates the maximum diameter for all mask images in a folder and saves the results to a CSV file.
-    """
-    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
-    results = []
 
-    for mask_filename in mask_files:
-        mask_path = os.path.join(mask_folder, mask_filename)
-
-        try:
-            diameter = calculatediameter(mask_path)
-        except Exception as e:
-            print(f"Error processing {mask_filename}: {e}")
-            diameter = 'N/A'
-
-        results.append({'filename': mask_filename, 'diameter_pixels': diameter})
-
-    df = pd.DataFrame(results)
-    df.to_csv(output_csv, index=False)
-    print(f"Diameter scores saved to: {output_csv}")
 
 
 def main(csv_path, save_path):
@@ -202,13 +153,13 @@ def main(csv_path, save_path):
     global Imagefolder  # Add this to modify Imagefolder globally
 
     # 0. Hair removal
-    Imagefolder = perform_hair_removal_if_needed(Imagefolder, metadata_path)
+    Imagefolder = hairratioandremoval(Imagefolder, metadata_path, output_folder)
 
 
     # 1. Asymmetry feature extraction
-    if not os.path.exists(outputA):
+    if not os.path.exists(os.path.join(output_folder, 'asymmetry_scores.csv')):
         print("Asymmetry CSV not found. Computing asymmetry features...")
-        Asymmetryforall_fast(Masksfolder, outputA)
+        Asymmetryforall_fast(Masksfolder, output_folder)
     else:
         print("Asymmetry CSV already exists. Skipping recomputation.")
 
@@ -218,9 +169,9 @@ def main(csv_path, save_path):
 
 
     # 2. Border Irregularity extraction
-    if not os.path.exists(outputB):
+    if not os.path.exists(os.path.join(output_folder, 'irregularity_scores.csv')):
         print("Irregularity CSV not found. Computing irregularity features...")
-        IrregularityForAll(Masksfolder, outputB)
+        IrregularityForAll(Masksfolder, output_folder)
     else:
         print("Irregularity CSV already exists. Skipping recomputation.")
 
@@ -229,9 +180,9 @@ def main(csv_path, save_path):
     # plot_irregularity_scores_from_df(df)
 
     # 3. Color Variation extraction
-    if not os.path.exists(outputC):
+    if not os.path.exists(os.path.join(output_folder, 'color_variation_scores.csv')):
         print("Color Variation CSV not found. Computing color features...")
-        ColorVariationForAll(Imagefolder, Masksfolder, outputC)
+        ColorVariationForAll(Imagefolder, Masksfolder, output_folder)
     else:
         print("Color Variation CSV already exists. Skipping recomputation.")
     # TO DO: Add a pretty plot of color variation scores
@@ -239,9 +190,9 @@ def main(csv_path, save_path):
     # plot_color_variation_scores_from_df(df)
 
     # 4. Blue Veil Feature extraction
-    if not os.path.exists(outputBV):
+    if not os.path.exists(os.path.join(output_folder, 'blue_veil_scores.csv')):
         print("Blue Veil CSV not found. Computing blue veil features...")
-        BlueWhiteVeilForAll(Imagefolder, Masksfolder, outputBV)
+        BlueWhiteVeilForAll(Imagefolder, Masksfolder, output_folder)
     else:
         print("Blue Veil CSV already exists. Skipping recomputation.")
     # TO DO: Add a pretty plot of blue veil scores maybe with different shades of blue
@@ -250,6 +201,7 @@ def main(csv_path, save_path):
 
 
 def merge_metadata(final_dataset_path, metadata_path):
+    final_dataset_path = os.path.join(final_dataset_path, 'dataset.csv')
     dataset = pd.read_csv(final_dataset_path)
     metadata = pd.read_csv(metadata_path)
 
@@ -263,17 +215,16 @@ def merge_metadata(final_dataset_path, metadata_path):
 
 
 if __name__ == "__main__":
-    output_folder = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result'
-    final_dataset_path = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\dataset.csv'
-    model_result_path = r'C:\Users\Dara\Desktop\itu\2025-FYP-Final\result\result_baseline.csv'
-    metadata_path = r'D:\zr7vgbcyr2-1\metadata.csv'
-
+    
+    """Adjust paths below according to your directory structure"""
+    output_folder = r'/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/'
+    model_result_path = r'/Users/youssefzardoumi/Desktop/ITU/Vscode/ProjectsinData/2025-FYP-Final/result/result_baseline.csv'
+    metadata_path = r'/Users/youssefzardoumi/Desktop/metadata.csv'
+    Masksfolder = r"/Users/youssefzardoumi/Desktop/Masked"
+    Imagefolder = r'/Users/youssefzardoumi/Desktop/imgs_part_1'
     
     # extract Features 
     main(None, None)  
-
+    
     # merge Features
-    merge_features(output_folder, final_dataset_path)
-
-    # merge metadata
-    merge_metadata(final_dataset_path, metadata_path)
+    merge_features(output_folder, metadata_path)

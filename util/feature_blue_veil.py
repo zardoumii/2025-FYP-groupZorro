@@ -69,7 +69,7 @@ def BlueWhiteVeilForAll(image_folder, mask_folder, output_csv):
                 score = 'N/A'
 
         results.append({'filename': image_filename, 'blue_white_veil_score': score})
-
+    output_csv = os.path.join(output_csv, 'blue_veil_scores.csv')
     df = pd.DataFrame(results)
     df.to_csv(output_csv, index=False)
     print(f"Blue-White veil scores saved to: {output_csv}")
