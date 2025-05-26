@@ -1,51 +1,15 @@
-import sys
 from os.path import join
 import os
-import cv2
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import train_test_split
-from os.path import join
+from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
-from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, ConfusionMatrixDisplay,
-    roc_curve, auc
-)
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.model_selection import GroupKFold
-from sklearn.model_selection import ShuffleSplit
 from imblearn.combine import SMOTEENN
-from collections import Counter
-import json
-from sklearn.model_selection import KFold
-from sklearn.base import clone
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def run_evaluation(X_train, X_test, y_train, y_test, models, use_bootstrap=False, n_additional_true=100):
