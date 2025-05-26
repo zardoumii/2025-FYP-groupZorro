@@ -129,3 +129,25 @@ def plot_asymmetry_scores_from_df(df):
     print("\nTop 20 lesions with highest asymmetry:")
     top_20 = df.sort_values('asymmetry_score', ascending=False).head(20)
     print(top_20[['filename', 'asymmetry_score', 'color']])
+
+def Asymmetryforall_fast(Masked_path, output_csv, max_workers=4):
+    """
+    Computes asymmetry scores for all mask files in the given folder and stores results.
+    """
+    output_csv = os.path.join(output_csv, 'asymmetry_scores.csv')
+    # Only real mask files (no weird Mac files)
+    files = [f for f in os.listdir(Masked_path) if f.endswith('.png') and not f.startswith('._')]
+    files = [join(Masked_path, f) for f in files]  # Full path
+
+    results = []
+
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        for filepath, score in zip(files, executor.map(processmaskasymmetry, files)):
+            clean_filename = os.path.basename(filepath).replace('_mask', '')
+            results.append({'filename': clean_filename, 'asymmetry_score': score})
+
+
+    resultsdf = pd.DataFrame(results)
+    resultsdf.to_csv(output_csv, index=False)
+    print(f"Asymmetry scores saved to: {output_csv}")
+    

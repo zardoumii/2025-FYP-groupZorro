@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
-
+import os
+import pandas as pd
+from os.path import join 
 
 def colorvariationscore(image_path, mask_path):
     """
@@ -35,3 +37,36 @@ def colorvariationscore(image_path, mask_path):
     avg_std = np.mean(std_per_channel)
 
     return avg_std
+
+def ColorVariationForAll(image_folder, mask_folder, output_csv):
+    """
+    Computes color variation scores for all image-mask pairs in specified folders and stores results.
+    
+    """
+    output_csv = os.path.join(output_csv, 'color_variation_scores.csv')
+    mask_files = [f for f in os.listdir(mask_folder) if f.endswith('.png')]
+    results = []
+
+    for mask_filename in mask_files:
+       
+        base_name = mask_filename.replace('_mask', '')
+        image_filename = base_name 
+
+        image_path = os.path.join(image_folder, image_filename)
+        mask_path = os.path.join(mask_folder, mask_filename)
+
+        if not os.path.exists(image_path):
+            print(f"Image not found: {image_path}")
+            score = 'N/A'
+        else:
+            try:
+                score = colorvariationscore(image_path, mask_path)
+            except Exception as e:
+                print(f"Error processing {mask_filename}: {e}")
+                score = 'N/A'
+
+        results.append({'filename': image_filename, 'color_variation_score': score})
+
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+    print(f"Color variation scores saved to: {output_csv}")
