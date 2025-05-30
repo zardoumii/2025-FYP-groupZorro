@@ -15,10 +15,10 @@ After running `main.extended` it would be also possible to run our plots. To run
 
 Github Users:
 
-Anna Lekston: Anna Weronika Lekston
-darageorgieva: Dara Dankova Georgieva 
-sssotirova: Sofia Stanimirova Sotirova
-zardoumi: Yossef Alla Eldin Salem
+- Anna Lekston: Anna Weronika Lekston
+- darageorgieva: Dara Dankova Georgieva 
+- sssotirova: Sofia Stanimirova Sotirova
+- zardoumi: Yossef Alla Eldin Salem
 
 
 
