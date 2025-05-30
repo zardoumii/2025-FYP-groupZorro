@@ -13,7 +13,12 @@ Then all you need to do is provide the path to the project folder (2025-FYP-Zorr
 After running `main.extended` it would be also possible to run our plots. To run the plots do the same by assigning your path to `base_path`.
 
 
+Github Users:
 
+Anna Lekston: Anna Weronika Lekston
+darageorgieva: Dara Dankova Georgieva 
+sssotirova: Sofia Stanimirova Sotirova
+zardoumi: Yossef Alla Eldin Salem
 
 
 
